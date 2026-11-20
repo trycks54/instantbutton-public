@@ -121,8 +121,8 @@
   .cavity.visible{opacity:1;}
   .threads{position:absolute;inset:6%;border-radius:50%;border:3px dashed rgba(200,210,220,.18);opacity:.55;}
 
-  .foldedCard{pointer-events:none;z-index:5;position:absolute;width:42%;aspect-ratio:524/483;left:50%;top:50%;transform:translate(-50%,-50%) scale(.72) rotate(-18deg);transform-origin:center center;background:transparent;box-shadow:none;opacity:0;transition:opacity 360ms ease 250ms, transform 360ms ease 250ms;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;}
-  .foldedCard.visible{pointer-events:auto;opacity:1;transform:translate(-50%,-50%) scale(1) rotate(-18deg);}
+  .foldedCard{pointer-events:none;z-index:5;position:absolute;width:42%;aspect-ratio:524/483;left:50%;top:50%;transform:translate(-50%,-50%) scale(.72) rotate(var(--reveal-angle, -18deg));transform-origin:center center;background:transparent;box-shadow:none;opacity:0;transition:opacity 360ms ease 250ms, transform 360ms ease 250ms;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;}
+  .foldedCard.visible{pointer-events:auto;opacity:1;transform:translate(-50%,-50%) scale(1) rotate(var(--reveal-angle, -18deg));}
   .foldedCard.floating{position:absolute;left:0;top:0;z-index:30;cursor:grab;transition:none;touch-action:none;will-change:transform,opacity;}
   .foldedCard.floating.dragging{cursor:grabbing;}
   .foldedCard .edgeCue{pointer-events:none;}
@@ -146,8 +146,8 @@
   .secretSettingsPanel p{margin:6px 0 16px;color:#a8b4cc;font-size:13px;line-height:1.5;}
   .secretSettingsPanel label{display:block;font-weight:700;font-size:14px;margin:14px 0 8px;}
   .secretSettingsPanel input[type=file]{display:block;width:100%;max-width:100%;font-size:14px;color:#c3cee2;background:#252e40;border-radius:10px;padding:12px;}
-  .revealPreview{display:flex;align-items:center;justify-content:center;min-height:126px;margin:12px 0;background:repeating-conic-gradient(#273244 0% 25%,#1b2433 0% 50%) 50% / 18px 18px;border:1px solid #4a5468;border-radius:14px;overflow:hidden;}
-  .revealPreview img{display:block;max-width:80%;max-height:122px;object-fit:contain;filter:drop-shadow(0 8px 8px #0007);}
+  .revealPreview{display:flex;align-items:center;justify-content:center;min-height:176px;margin:12px 0;background:repeating-conic-gradient(#273244 0% 25%,#1b2433 0% 50%) 50% / 18px 18px;border:1px solid #4a5468;border-radius:14px;overflow:hidden;}
+  .revealPreview img{display:block;max-width:min(80%,122px);max-height:122px;object-fit:contain;transform:rotate(var(--reveal-angle, -18deg));filter:drop-shadow(0 8px 8px #0007);}
   .revealSizeRow{display:flex;align-items:center;gap:12px;}
   .revealSizeRow input{flex:1;min-width:0;accent-color:#ff6b62;}
   .revealSizeRow output{min-width:52px;text-align:right;font-variant-numeric:tabular-nums;}
@@ -175,10 +175,6 @@
   .setting .sub{font-size:12px;color:#95a3c2;margin-top:3px;}
   .toggleRow{display:flex;gap:8px;align-items:center;}
   .smallBtn{border:0;background:#2a3344;color:#fff;border-radius:12px;padding:10px 12px;font-weight:800;}
-  .motionSelect{max-width:145px;background:#293143;border:1px solid #4b5260;border-radius:10px;padding:9px 5px;color:white;}
-  #motionSensitivity{width:92px;accent-color:#f54d5f;}
-  #motionSensitivityText{font-size:12px;min-width:12px;}
-  #motionInertia,#shakeEject{width:21px;height:21px;accent-color:#f54d5f;}
   .number{width:80px;text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:10px;border-radius:12px;color:#fff;}
   .footerRow{display:flex;gap:10px;margin-top:16px;}
   .footerRow .smallBtn{flex:1;}
@@ -205,7 +201,7 @@
   .cavity { opacity:1; transition:none; }
   .foldedCard:not(.floating) {
     opacity:1;
-    transform:translate(-50%,-50%) rotate(-18deg);
+    transform:translate(-50%,-50%) rotate(var(--reveal-angle, -18deg));
     transition:none;
   }
   .foldedCard:not(.floating):not(.visible) { pointer-events:none; }
@@ -384,7 +380,11 @@
         <input type="range" id="revealSizeSlider" min="30" max="200" step="5" value="100">
         <output id="revealSizeValue" for="revealSizeSlider">100%</output>
       </div>
-      <p>100% is the original reveal size. Smaller or larger sizes also work when the object is dragged or moved by tilting.</p>
+      <label for="revealAngleSlider">Object rotation</label>
+      <div class="revealSizeRow">
+        <input type="range" id="revealAngleSlider" min="-180" max="180" step="1" value="-18">
+        <output id="revealAngleValue" for="revealAngleSlider">-18°</output>
+      </div>
       <section class="secretSection">
         <h3>Secret trigger</h3>
         <label for="workingPressCount">Normal button presses before the broken sound</label>
@@ -467,27 +467,6 @@
         <div class="toggleRow">
           <button class="smallBtn" id="brokenStyleBtn">Mechanical</button>
         </div>
-      </div>
-      <div class="setting">
-        <div><div class="label">Card motion</div><div class="sub">Choose touch, tilt, or both</div></div>
-        <select id="motionMode" class="motionSelect"><option value="hybrid">Touch + Tilt</option><option value="touch">Touch only</option><option value="motion">Tilt only</option></select>
-      </div>
-      <div class="setting">
-        <div><div class="label">Motion sensitivity</div><div class="sub">Adjust card sliding speed</div></div>
-        <input type="range" id="motionSensitivity" min="1" max="10" value="5" />
-        <span id="motionSensitivityText">5</span>
-      </div>
-      <div class="setting">
-        <div><div class="label">Realistic inertia</div><div class="sub">Card glides after movement</div></div>
-        <input type="checkbox" id="motionInertia" checked />
-      </div>
-      <div class="setting">
-        <div><div class="label">Shake to eject</div><div class="sub">After the red cover is removed</div></div>
-        <input type="checkbox" id="shakeEject" checked />
-      </div>
-      <div class="setting" style="display:block">
-        <button class="smallBtn primary" id="enableMotion" style="width:100%;margin-bottom:8px">Enable motion sensors</button>
-        <div id="sensorStatus" class="sub" aria-live="polite">Motion not yet enabled. HTTPS and sensor permission may be required.</div>
       </div>
       <div class="footerRow">
         <button class="smallBtn" id="resetBtn">Reset routine</button>
@@ -1023,27 +1002,49 @@
       el.foldedCard.style.height=newH+'px';
       applyCardTransform();
     }
+    return next;
   }
-  var revealSizeKey='instant-button-reveal-size';
-  var revealSizeChanged=false;
-  var revealSizeSave=Promise.resolve();
-  function saveRevealSize(value){
-    revealSizeChanged=true;
-    updateRevealSize(value);
-    var size=revealSettings.size;
-    var savedLocally=false;
-    try{
-      localStorage.setItem(revealSizeKey,String(size));
-      savedLocally=true;
-    }catch(e){}
-    revealSizeSave=revealSizeSave.then(function(){
-      return revealStoreSet('size',size);
-    }).catch(function(){
-      if(!savedLocally&&revealSettings.size===size){
-        revealStatus.textContent='Could not save object size on this device.';
-      }
-    });
+  var revealAngleSlider=document.getElementById('revealAngleSlider');
+  var revealAngleValue=document.getElementById('revealAngleValue');
+  function updateRevealAngle(value){
+    var parsed=parseInt(value,10);
+    var angle=Number.isFinite(parsed)?Math.max(-180,Math.min(180,parsed)):-18;
+    revealAngleSlider.value=String(angle);
+    revealAngleValue.textContent=angle+'°';
+    revealPreview.style.setProperty('--reveal-angle',angle+'deg');
+    el.foldedCard.style.setProperty('--reveal-angle',angle+'deg');
+    return angle;
   }
+  function revealPreference(name,apply,label){
+    var key='instant-button-reveal-'+name;
+    var changed=false;
+    var pending=Promise.resolve();
+    var saved=null;
+    try{saved=localStorage.getItem(key);}catch(e){}
+    if(saved!==null){
+      apply(saved);
+    }else{
+      revealStoreGet(name).then(function(value){
+        if(value!==null&&!changed)apply(value);
+      }).catch(function(){});
+    }
+    return function(value){
+      changed=true;
+      var next=apply(value);
+      var savedLocally=false;
+      try{
+        localStorage.setItem(key,String(next));
+        savedLocally=true;
+      }catch(e){}
+      pending=pending.then(function(){
+        return revealStoreSet(name,next);
+      }).catch(function(){
+        if(!savedLocally)revealStatus.textContent='Could not save '+label+' on this device.';
+      });
+    };
+  }
+  var saveRevealSize=revealPreference('size',updateRevealSize,'object size');
+  var saveRevealAngle=revealPreference('angle',updateRevealAngle,'object rotation');
   function openRevealSettings(){
     revealStatus.textContent='';
     revealOverlay.classList.add('show');
@@ -1086,6 +1087,7 @@
     reader.readAsDataURL(file);
   });
   revealSizeSlider.addEventListener('input',function(){saveRevealSize(this.value);});
+  revealAngleSlider.addEventListener('input',function(){saveRevealAngle(this.value);});
   document.getElementById('closeRevealSettings').addEventListener('click',closeRevealSettings);
   document.getElementById('saveRevealSettings').addEventListener('click',closeRevealSettings);
   document.getElementById('restoreDefaultReveal').addEventListener('click',function(){
@@ -1093,19 +1095,11 @@
     revealInput.value='';
     applyRevealImage();
     saveRevealSize(100);
+    saveRevealAngle(-18);
     revealStatus.textContent='Default folded card restored.';
     revealStoreSet('image',null).catch(function(){revealStatus.textContent='Could not clear saved image; check storage.';});
   });
   revealOverlay.addEventListener('click',function(e){if(e.target===revealOverlay)closeRevealSettings();});
-  var savedRevealSize=null;
-  try{savedRevealSize=localStorage.getItem(revealSizeKey);}catch(e){}
-  if(savedRevealSize!==null){
-    updateRevealSize(savedRevealSize);
-  }else{
-    revealStoreGet('size').then(function(saved){
-      if(saved!==null&&!revealSizeChanged)updateRevealSize(saved);
-    }).catch(function(){});
-  }
   applyRevealImage();
   revealStoreGet('image').then(function(saved){
     if(saved&&saved.url)setUploadedReveal(saved.url,saved.width||524,saved.height||483);
@@ -1557,7 +1551,6 @@
   }
 
   function openStage(sound){
-    if(motionConfig.mode!=='touch' && !motionConfig.requested) enableMotionSensors();
     stopMemeAudio();
     state.current = sound;
     state.pressCount = 0;
@@ -1565,7 +1558,6 @@
     state.workingPressesRemaining = 0;
     state.broken = false;
     state.isOpen = false;
-    motionPhysics.vx=0;motionPhysics.vy=0;motionPhysics.shakeHits=0;
     state.cardOut = false;
     state.rotateAccum = 0;
     state.twistStarted = false;
@@ -1673,11 +1665,10 @@
     playMetalLidSound('remove');
     el.capWrap.classList.add('removed');
     // Artwork and cavity were already painted behind the cap.
-    // This class only enables the card's interaction and shake-to-eject.
+    // Enable interaction with the exposed card.
     el.cavity.classList.add('visible');
     el.foldedCard.classList.add('visible');
-    motionPhysics.vx=0;motionPhysics.vy=0;motionPhysics.pauseUntil=0;
-    el.instructionBox.textContent='Tilt to slide the card, shake to eject it, or touch it to pick it up.';
+    el.instructionBox.textContent='Touch the card to pick it up, then drag it toward an edge.';
   }
   function restoreCap(){
     if(capTimer){clearTimeout(capTimer);capTimer=null;}
@@ -1698,7 +1689,6 @@
     state.workingPressesRemaining = 0;
     state.broken = false;
     state.isOpen = false;
-    motionPhysics.vx=0;motionPhysics.vy=0;motionPhysics.shakeHits=0;
     state.cardOut = false;
     state.rotateAccum = 0;
     state.twistStarted = false;
@@ -1734,7 +1724,6 @@
     card.style.top = '0px';
     cardPos.x = centerX - desiredW/2;
     cardPos.y = centerY - desiredH/2;
-    cardPos.rotation = -18;
     applyCardTransform();
     card.style.transition = 'none';
     card.style.opacity = '1';
@@ -1758,9 +1747,7 @@
     c.style.transition = '';
     c.style.opacity = '';
     cardGesture = null;
-    cardPos = {x:0,y:0,rotation:-18};
-    motionPhysics.vx = 0; motionPhysics.vy = 0;
-    motionPhysics.ejecting = false;
+    cardPos = {x:0,y:0};
     state.cardOut = false;
     state.cardHot = false;
     el.edgeCue.classList.remove('hot');
@@ -1936,10 +1923,10 @@
   // Mouse and pen keep Pointer Events with pointer capture. Never mix both.
   var cardGesture = null;
   var cardExtractTimer = null;
-  var cardPos = {x:0,y:0,rotation:-18};
+  var cardPos = {x:0,y:0};
 
   function applyCardTransform(){
-    el.foldedCard.style.transform = 'translate3d(' + cardPos.x + 'px,' + cardPos.y + 'px,0) rotate(' + cardPos.rotation + 'deg)';
+    el.foldedCard.style.transform = 'translate3d(' + cardPos.x + 'px,' + cardPos.y + 'px,0) rotate(var(--reveal-angle, -18deg))';
   }
 
   function measureStage(){
@@ -1948,11 +1935,9 @@
   }
 
   function beginCardDrag(clientX, clientY, id, mode){
-    if(!state.isOpen || cardGesture || motionConfig.mode === 'motion') return false;
-    if(!el.foldedCard.classList.contains('floating')) ejectCard(false);
+    if(!state.isOpen || cardGesture) return false;
+    if(el.foldedCard.classList.contains('visible') && !el.foldedCard.classList.contains('floating')) placeCardOnScreen();
     if(!el.foldedCard.classList.contains('floating')) return false;
-    motionPhysics.vx = 0; motionPhysics.vy = 0;
-    motionPhysics.ejecting = false;
     if(cardExtractTimer){ clearTimeout(cardExtractTimer); cardExtractTimer = null; }
     el.foldedCard.style.transition = 'none';
     el.foldedCard.style.opacity = '1';
@@ -2002,7 +1987,6 @@
     var g = cardGesture; if(!g) return;
     cardGesture = null;
     state.draggingCard = false;
-    motionPhysics.pauseUntil = performance.now() + 200;
     el.foldedCard.classList.remove('dragging');
 
     if(!cancelled && g.edge && g.moved){
@@ -2083,180 +2067,6 @@
     }
     renderGrid(state.filtered);
   }
-
-  // Motion engine: maintains the same cardPos coordinates used by finger dragging.
-  var motionConfig = {mode:'hybrid', sensitivity:5, inertia:true, shake:true, enabled:false, requested:false};
-  var motionPhysics = {ax:0, ay:0, vx:0, vy:0, last:null, pauseUntil:0, ejecting:false,
-                       gravity:{x:0,y:0,z:0}, lastShake:0, shakeHits:0, lastHit:0, hasData:false};
-  var sensorEls = {
-    mode:document.getElementById('motionMode'),
-    sensitivity:document.getElementById('motionSensitivity'),
-    sensitivityText:document.getElementById('motionSensitivityText'),
-    inertia:document.getElementById('motionInertia'),
-    shake:document.getElementById('shakeEject'),
-    enable:document.getElementById('enableMotion'),
-    status:document.getElementById('sensorStatus')
-  };
-  function setSensorStatus(message){sensorEls.status.textContent=message;}
-
-  function ejectCard(animate){
-    if(!state.isOpen || !el.foldedCard.classList.contains('visible')) return;
-    if(el.foldedCard.classList.contains('floating')) return;
-    placeCardOnScreen();
-    motionPhysics.vx=0; motionPhysics.vy=0;
-    motionPhysics.pauseUntil=animate?performance.now()+420:0;
-    if(animate){
-      var c=el.foldedCard;
-      motionPhysics.ejecting=true;
-      var endTransform=c.style.transform;
-      var startTransform=endTransform+' scale(.3)';
-      if(typeof c.animate === 'function'){
-        var animation=c.animate([
-          {transform:startTransform,opacity:.65,offset:0},
-          {transform:endTransform+' scale(1.15)',opacity:1,offset:.6},
-          {transform:endTransform,opacity:1,offset:1}
-        ],{duration:440,easing:'cubic-bezier(.2,.8,.3,1)'});
-        animation.onfinish=function(){motionPhysics.ejecting=false;};
-        animation.oncancel=function(){motionPhysics.ejecting=false;};
-      }else {motionPhysics.ejecting=false;}
-      showToast('The card jumped out!');
-    }
-    el.instructionBox.textContent='Drag the card freely, or tilt the device to slide it toward any edge.';
-  }
-
-  function motionCoordinates(gravityX,gravityY){
-    // DeviceMotion axes rotate with the hardware. Convert to CSS screen coordinates.
-    var angle=(screen.orientation && Number.isFinite(screen.orientation.angle)) ? screen.orientation.angle :
-              (typeof window.orientation === 'number' ? window.orientation : 0);
-    var rad=angle*Math.PI/180;
-    return {x:gravityX*Math.cos(rad)-gravityY*Math.sin(rad),
-            y:gravityX*Math.sin(rad)+gravityY*Math.cos(rad)};
-  }
-
-  function onMotion(e){
-    var g=e.accelerationIncludingGravity;
-    if(!g || !Number.isFinite(g.x) || !Number.isFinite(g.y)) return;
-    motionPhysics.hasData=true;
-    if(sensorEls.status.textContent.indexOf('Waiting')>=0){setSensorStatus('Motion active. Tilt to slide; shake to eject.');}
-    // Gravity vector low-pass and acceleration high-pass, for shake detection.
-    var f=motionPhysics.gravity;
-    f.x=.84*f.x+.16*g.x;
-    f.y=.84*f.y+.16*g.y;
-    if(Number.isFinite(g.z))f.z=.84*f.z+.16*g.z;
-    var oriented=motionCoordinates(f.x,f.y);
-    motionPhysics.ax=oriented.x;
-    motionPhysics.ay=-oriented.y;
-    var jerk=e.acceleration;
-    var magnitude = jerk && Number.isFinite(jerk.x) && Number.isFinite(jerk.y) ?
-      Math.hypot(jerk.x,jerk.y,Number.isFinite(jerk.z)?jerk.z:0) :
-      Math.hypot(g.x-f.x,g.y-f.y,(Number.isFinite(g.z)?g.z:0)-f.z);
-    var now=performance.now();
-    if(state.isOpen && motionConfig.shake && !el.foldedCard.classList.contains('floating') &&
-       el.foldedCard.classList.contains('visible') && !state.draggingCard &&
-       magnitude>13 && now-motionPhysics.lastHit>120){
-      if(now-motionPhysics.lastHit>700)motionPhysics.shakeHits=0;
-      motionPhysics.lastHit=now;
-      motionPhysics.shakeHits++;
-      if(motionPhysics.shakeHits>=2 && now-motionPhysics.lastShake>1400){
-        motionPhysics.lastShake=now;
-        motionPhysics.shakeHits=0;
-        ejectCard(true);
-      }
-    }
-  }
-
-  function onTilt(e){
-    // Fallback for browsers reporting orientation but not motion gravity.
-    if(motionPhysics.hasData) return;
-    if(!Number.isFinite(e.gamma) || !Number.isFinite(e.beta)) return;
-    // Project gravity onto the screen plane, including in landscape.
-    var beta=e.beta*Math.PI/180;
-    var gamma=e.gamma*Math.PI/180;
-    var oriented=motionCoordinates(9.81*Math.cos(beta)*Math.sin(gamma),-9.81*Math.sin(beta));
-    motionPhysics.ax=oriented.x;
-    motionPhysics.ay=-oriented.y;
-    if(sensorEls.status.textContent.indexOf('Waiting')>=0) setSensorStatus('Tilt active.');
-  }
-
-  function motionFrame(time){
-    if(motionPhysics.last === null) motionPhysics.last=time;
-    var dt=Math.min((time-motionPhysics.last)/1000,.035);
-    motionPhysics.last=time;
-    if(motionConfig.enabled && motionConfig.mode!=='touch' && state.isOpen &&
-       el.foldedCard.classList.contains('visible') && !state.cardOut &&
-       !state.draggingCard && !cardGesture && !motionPhysics.ejecting &&
-       time>motionPhysics.pauseUntil){
-      if(!el.foldedCard.classList.contains('floating')){
-        if(Math.abs(motionPhysics.ax)<=0.65 && Math.abs(motionPhysics.ay)<=0.65){
-          requestAnimationFrame(motionFrame);
-          return;
-        }
-        ejectCard(false);
-      }
-      var p=motionPhysics;
-      var ax=Math.abs(p.ax)>0.65?p.ax:0;
-      var ay=Math.abs(p.ay)>0.65?p.ay:0;
-      var gain=motionConfig.sensitivity*30;
-      p.vx+=(ax*gain)*dt;
-      p.vy+=(ay*gain)*dt;
-      var damp=motionConfig.inertia?Math.exp(-2.5*dt):Math.exp(-12*dt);
-      p.vx*=damp; p.vy*=damp;
-      p.vx=Math.max(-900,Math.min(900,p.vx));
-      p.vy=Math.max(-900,Math.min(900,p.vy));
-      if(Math.abs(p.vx)>.1 || Math.abs(p.vy)>.1){
-        cardPos.x+=p.vx*dt;
-        cardPos.y+=p.vy*dt;
-        applyCardTransform();
-        var rect=measureStage(),w=el.foldedCard.offsetWidth,h=el.foldedCard.offsetHeight;
-        if(cardPos.x>rect.width+w || cardPos.x< -w*2 || cardPos.y>rect.height+h || cardPos.y< -h*2){
-          state.cardOut=true;
-          el.foldedCard.style.opacity='0';
-          p.vx=0;p.vy=0;
-          el.instructionBox.textContent='Card extracted — produce the real folded card.';
-        }
-      }
-    }
-    requestAnimationFrame(motionFrame);
-  }
-  requestAnimationFrame(motionFrame);
-
-  var motionPermissionPending=false;
-  async function enableMotionSensors(){
-    if(motionConfig.enabled || motionPermissionPending)return;
-    motionConfig.requested=true;
-    if(!('DeviceMotionEvent' in window) && !('DeviceOrientationEvent' in window)){
-      setSensorStatus('Motion sensors are unavailable in this browser. Touch dragging still works.');
-      return;
-    }
-    motionPermissionPending=true;
-    try{
-      // Must execute in a user click handler on iOS Safari.
-      if(typeof DeviceMotionEvent!=='undefined' && typeof DeviceMotionEvent.requestPermission==='function'){
-        var status=await DeviceMotionEvent.requestPermission();
-        if(status!=='granted')throw new Error('Motion access was not granted');
-      }else if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
-        var orientationStatus=await DeviceOrientationEvent.requestPermission();
-        if(orientationStatus!=='granted')throw new Error('Tilt access was not granted');
-      }
-      window.addEventListener('devicemotion',onMotion,{passive:true});
-      window.addEventListener('deviceorientation',onTilt,{passive:true});
-      motionConfig.enabled=true;
-      sensorEls.enable.textContent='Motion enabled';
-      setSensorStatus('Waiting for sensor data. Use HTTPS on a real phone or tablet.');
-    }catch(err){setSensorStatus('Motion unavailable: '+(err.message||err));}
-    finally{motionPermissionPending=false;}
-  }
-  sensorEls.enable.addEventListener('click',enableMotionSensors);
-  sensorEls.mode.addEventListener('change',function(){motionConfig.mode=this.value;motionPhysics.vx=0;motionPhysics.vy=0;});
-  sensorEls.sensitivity.addEventListener('input',function(){motionConfig.sensitivity=Number(this.value);sensorEls.sensitivityText.textContent=this.value;});
-  sensorEls.inertia.addEventListener('change',function(){motionConfig.inertia=this.checked;});
-  sensorEls.shake.addEventListener('change',function(){motionConfig.shake=this.checked;});
-  // If motion permission is not available, tap on the exposed card as fallback.
-  function onCardWake(){
-    if(state.isOpen && el.foldedCard.classList.contains('visible') &&
-       !el.foldedCard.classList.contains('floating')) ejectCard(true);
-  }
-  el.foldedCard.addEventListener('click',onCardWake);
 
   el.searchInput.addEventListener('input', function(){
     var q = this.value.toLowerCase().trim();
