@@ -962,25 +962,25 @@
       request.onsuccess=function(){resolve(request.result);};
     });
   }
-  function revealStoreGet(){
+  function revealStoreGet(key){
     return readRevealDB().then(function(db){
       return new Promise(function(resolve,reject){
         var tx=db.transaction('settings','readonly');
-        var req=tx.objectStore('settings').get('image');
+        var req=tx.objectStore('settings').get(key);
         req.onsuccess=function(){resolve(req.result||null);};
         req.onerror=function(){reject(req.error);};
         tx.oncomplete=function(){db.close();};
       });
     });
   }
-  function revealStoreSet(value){
+  function revealStoreSet(key,value){
     return readRevealDB().then(function(db){
       return new Promise(function(resolve,reject){
         var tx=db.transaction('settings','readwrite');
-        if(value)tx.objectStore('settings').put(value,'image');
-        else tx.objectStore('settings').delete('image');
+        if(value!==null)tx.objectStore('settings').put(value,key);
+        else tx.objectStore('settings').delete(key);
         tx.oncomplete=function(){db.close();resolve();};
-        tx.onerror=function(){db.close();reject(tx.error||new Error('Storage error'));};
+        tx.onabort=function(){db.close();reject(tx.error||new Error('Storage error'));};
       });
     });
   }
@@ -999,7 +999,6 @@
     revealSettings.size=next;
     revealSizeSlider.value=String(next);
     revealSizeValue.textContent=next+'%';
-    try{localStorage.setItem('instant-button-reveal-size',String(next));}catch(e){}
     if(el.foldedCard.classList.contains('floating')){
       var screen=el.screenGlass.getBoundingClientRect();
       var newW=Math.min(screen.width*.88,Math.min(screen.width*.60,330)*next/100);
@@ -1012,6 +1011,26 @@
       el.foldedCard.style.height=newH+'px';
       applyCardTransform();
     }
+  }
+  var revealSizeKey='instant-button-reveal-size';
+  var revealSizeChanged=false;
+  var revealSizeSave=Promise.resolve();
+  function saveRevealSize(value){
+    revealSizeChanged=true;
+    updateRevealSize(value);
+    var size=revealSettings.size;
+    var savedLocally=false;
+    try{
+      localStorage.setItem(revealSizeKey,String(size));
+      savedLocally=true;
+    }catch(e){}
+    revealSizeSave=revealSizeSave.then(function(){
+      return revealStoreSet('size',size);
+    }).catch(function(){
+      if(!savedLocally&&revealSettings.size===size){
+        revealStatus.textContent='Could not save object size on this device.';
+      }
+    });
   }
   function openRevealSettings(){
     revealStatus.textContent='';
@@ -1045,7 +1064,7 @@
         var data=canvas.toDataURL('image/png');
         setUploadedReveal(data,canvas.width,canvas.height);
         revealStatus.textContent='Image selected. Stored on this device.';
-        revealStoreSet({url:data,width:canvas.width,height:canvas.height}).then(function(){
+        revealStoreSet('image',{url:data,width:canvas.width,height:canvas.height}).then(function(){
           revealStatus.textContent='Image saved for offline use.';
         }).catch(function(){revealStatus.textContent='Image works now, but could not be saved. Check available storage.';});
       };
@@ -1054,21 +1073,29 @@
     };
     reader.readAsDataURL(file);
   });
-  revealSizeSlider.addEventListener('input',function(){updateRevealSize(this.value);});
+  revealSizeSlider.addEventListener('input',function(){saveRevealSize(this.value);});
   document.getElementById('closeRevealSettings').addEventListener('click',closeRevealSettings);
   document.getElementById('saveRevealSettings').addEventListener('click',closeRevealSettings);
   document.getElementById('restoreDefaultReveal').addEventListener('click',function(){
     revealSettings.image=null;revealSettings.ratio=483/524;
     revealInput.value='';
     applyRevealImage();
-    updateRevealSize(100);
+    saveRevealSize(100);
     revealStatus.textContent='Default folded card restored.';
-    revealStoreSet(null).catch(function(){revealStatus.textContent='Could not clear saved image; check storage.';});
+    revealStoreSet('image',null).catch(function(){revealStatus.textContent='Could not clear saved image; check storage.';});
   });
   revealOverlay.addEventListener('click',function(e){if(e.target===revealOverlay)closeRevealSettings();});
-  try{updateRevealSize(localStorage.getItem('instant-button-reveal-size')||100);}catch(e){updateRevealSize(100);}
+  var savedRevealSize=null;
+  try{savedRevealSize=localStorage.getItem(revealSizeKey);}catch(e){}
+  if(savedRevealSize!==null){
+    updateRevealSize(savedRevealSize);
+  }else{
+    revealStoreGet('size').then(function(saved){
+      if(saved!==null&&!revealSizeChanged)updateRevealSize(saved);
+    }).catch(function(){});
+  }
   applyRevealImage();
-  revealStoreGet().then(function(saved){
+  revealStoreGet('image').then(function(saved){
     if(saved&&saved.url)setUploadedReveal(saved.url,saved.width||524,saved.height||483);
   }).catch(function(){});
 
