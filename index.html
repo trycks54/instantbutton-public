@@ -436,7 +436,7 @@
       <div class="setting">
         <div>
           <div class="label">Secret lower-right hold</div>
-          <div class="sub">Press and hold the lower-right corner for 1.2 seconds. The next two presses work; the third breaks.</div>
+          <div class="sub">Press and hold the lower-right corner for 2.2 seconds. The next two presses work; the third breaks.</div>
         </div>
         <input type="checkbox" id="volumeSecretToggle" checked aria-label="Enable secret lower-right hold trigger" />
       </div>
@@ -2388,7 +2388,7 @@
       lowerRightHoldTimer=null;
       secretlyArmBreak();
       lowerRightPointer=null;
-    },1200);
+    },2200);
     return true;
   }
   function moveLowerRightHold(x,y,id,mode){
