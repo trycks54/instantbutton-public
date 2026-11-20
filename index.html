@@ -1557,6 +1557,7 @@
   }
 
   function openStage(sound){
+    if(motionConfig.mode!=='touch' && !motionConfig.requested) enableMotionSensors();
     stopMemeAudio();
     state.current = sound;
     state.pressCount = 0;
@@ -1675,8 +1676,8 @@
     // This class only enables the card's interaction and shake-to-eject.
     el.cavity.classList.add('visible');
     el.foldedCard.classList.add('visible');
-    motionPhysics.vx=0;motionPhysics.vy=0;
-    el.instructionBox.textContent='Shake to pop out the folded card, or touch the card to pick it up.';
+    motionPhysics.vx=0;motionPhysics.vy=0;motionPhysics.pauseUntil=0;
+    el.instructionBox.textContent='Tilt to slide the card, shake to eject it, or touch it to pick it up.';
   }
   function restoreCap(){
     if(capTimer){clearTimeout(capTimer);capTimer=null;}
@@ -2084,7 +2085,7 @@
   }
 
   // Motion engine: maintains the same cardPos coordinates used by finger dragging.
-  var motionConfig = {mode:'hybrid', sensitivity:5, inertia:true, shake:true, enabled:false};
+  var motionConfig = {mode:'hybrid', sensitivity:5, inertia:true, shake:true, enabled:false, requested:false};
   var motionPhysics = {ax:0, ay:0, vx:0, vy:0, last:null, pauseUntil:0, ejecting:false,
                        gravity:{x:0,y:0,z:0}, lastShake:0, shakeHits:0, lastHit:0, hasData:false};
   var sensorEls = {
@@ -2103,7 +2104,7 @@
     if(el.foldedCard.classList.contains('floating')) return;
     placeCardOnScreen();
     motionPhysics.vx=0; motionPhysics.vy=0;
-    motionPhysics.pauseUntil=performance.now()+420;
+    motionPhysics.pauseUntil=animate?performance.now()+420:0;
     if(animate){
       var c=el.foldedCard;
       motionPhysics.ejecting=true;
@@ -2168,8 +2169,13 @@
     // Fallback for browsers reporting orientation but not motion gravity.
     if(motionPhysics.hasData) return;
     if(!Number.isFinite(e.gamma) || !Number.isFinite(e.beta)) return;
-    motionPhysics.ax=Math.max(-8,Math.min(8,e.gamma/5));
-    motionPhysics.ay=Math.max(-8,Math.min(8,e.beta/5));
+    // Project gravity onto the screen plane, including in landscape.
+    var beta=e.beta*Math.PI/180;
+    var gamma=e.gamma*Math.PI/180;
+    var oriented=motionCoordinates(9.81*Math.cos(beta)*Math.sin(gamma),-9.81*Math.sin(beta));
+    motionPhysics.ax=oriented.x;
+    motionPhysics.ay=-oriented.y;
+    if(sensorEls.status.textContent.indexOf('Waiting')>=0) setSensorStatus('Tilt active.');
   }
 
   function motionFrame(time){
@@ -2177,9 +2183,16 @@
     var dt=Math.min((time-motionPhysics.last)/1000,.035);
     motionPhysics.last=time;
     if(motionConfig.enabled && motionConfig.mode!=='touch' && state.isOpen &&
-       el.foldedCard.classList.contains('floating') && !state.cardOut &&
+       el.foldedCard.classList.contains('visible') && !state.cardOut &&
        !state.draggingCard && !cardGesture && !motionPhysics.ejecting &&
        time>motionPhysics.pauseUntil){
+      if(!el.foldedCard.classList.contains('floating')){
+        if(Math.abs(motionPhysics.ax)<=0.65 && Math.abs(motionPhysics.ay)<=0.65){
+          requestAnimationFrame(motionFrame);
+          return;
+        }
+        ejectCard(false);
+      }
       var p=motionPhysics;
       var ax=Math.abs(p.ax)>0.65?p.ax:0;
       var ay=Math.abs(p.ay)>0.65?p.ay:0;
@@ -2207,24 +2220,31 @@
   }
   requestAnimationFrame(motionFrame);
 
+  var motionPermissionPending=false;
   async function enableMotionSensors(){
+    if(motionConfig.enabled || motionPermissionPending)return;
+    motionConfig.requested=true;
     if(!('DeviceMotionEvent' in window) && !('DeviceOrientationEvent' in window)){
       setSensorStatus('Motion sensors are unavailable in this browser. Touch dragging still works.');
       return;
     }
+    motionPermissionPending=true;
     try{
       // Must execute in a user click handler on iOS Safari.
       if(typeof DeviceMotionEvent!=='undefined' && typeof DeviceMotionEvent.requestPermission==='function'){
         var status=await DeviceMotionEvent.requestPermission();
         if(status!=='granted')throw new Error('Motion access was not granted');
+      }else if(typeof DeviceOrientationEvent!=='undefined' && typeof DeviceOrientationEvent.requestPermission==='function'){
+        var orientationStatus=await DeviceOrientationEvent.requestPermission();
+        if(orientationStatus!=='granted')throw new Error('Tilt access was not granted');
       }
       window.addEventListener('devicemotion',onMotion,{passive:true});
       window.addEventListener('deviceorientation',onTilt,{passive:true});
       motionConfig.enabled=true;
       sensorEls.enable.textContent='Motion enabled';
       setSensorStatus('Waiting for sensor data. Use HTTPS on a real phone or tablet.');
-      showToast('Motion enabled');
     }catch(err){setSensorStatus('Motion unavailable: '+(err.message||err));}
+    finally{motionPermissionPending=false;}
   }
   sensorEls.enable.addEventListener('click',enableMotionSensors);
   sensorEls.mode.addEventListener('change',function(){motionConfig.mode=this.value;motionPhysics.vx=0;motionPhysics.vy=0;});
