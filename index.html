@@ -1672,7 +1672,7 @@
     // Enable interaction with the exposed card.
     el.cavity.classList.add('visible');
     el.foldedCard.classList.add('visible');
-    el.instructionBox.textContent='Touch the card to pick it up, then drag it toward an edge.';
+    el.instructionBox.textContent='Drag the card toward an edge, or hold still for 1.2 seconds and release to make it vanish.';
   }
   function restoreCap(){
     if(capTimer){clearTimeout(capTimer);capTimer=null;}
@@ -1938,35 +1938,46 @@
     return { width:s.width, height:s.height };
   }
 
-  function beginCardDrag(clientX, clientY, id, mode){
-    if(!state.isOpen || cardGesture) return false;
-    if(el.foldedCard.classList.contains('visible') && !el.foldedCard.classList.contains('floating')) placeCardOnScreen();
-    if(!el.foldedCard.classList.contains('floating')) return false;
-    if(cardExtractTimer){ clearTimeout(cardExtractTimer); cardExtractTimer = null; }
-    el.foldedCard.style.transition = 'none';
-    el.foldedCard.style.opacity = '1';
+  var cardVanishHoldMs = 1200;
+  var cardHoldSlop = 6;
+
+  function cardIsAvailable(){
+    return state.isOpen && !state.cardOut && el.stageScreen.classList.contains('active') &&
+      el.foldedCard.classList.contains('visible');
+  }
+
+  function beginCardGesture(clientX, clientY, id, mode, target){
+    if(cardGesture || !cardIsAvailable() || target.closest('button, input, select, textarea, a')) return false;
     cardGesture = {
       id:id,
       mode:mode,
       startX:clientX,
       startY:clientY,
-      originX:cardPos.x,
-      originY:cardPos.y,
+      startedAt:performance.now(),
+      onCard:el.foldedCard.contains(target),
       moved:false,
-      edge:null,
-      stage:measureStage()
+      dragging:false,
+      edge:null
     };
-    state.draggingCard = true;
-    state.cardOut = false;
-    el.foldedCard.classList.add('dragging');
     return true;
   }
 
-  function updateCardDrag(clientX, clientY){
-    var g = cardGesture; if(!g) return;
+  function updateCardGesture(clientX, clientY){
+    var g = cardGesture;
     var dx = clientX - g.startX;
     var dy = clientY - g.startY;
-    if(Math.abs(dx) + Math.abs(dy) > 2) g.moved = true;
+    if(!g.moved && Math.hypot(dx,dy) <= cardHoldSlop) return;
+    g.moved = true;
+    if(!g.onCard || !cardIsAvailable()) return;
+    if(!g.dragging){
+      if(!el.foldedCard.classList.contains('floating')) placeCardOnScreen();
+      g.originX = cardPos.x;
+      g.originY = cardPos.y;
+      g.stage = measureStage();
+      g.dragging = true;
+      state.draggingCard = true;
+      el.foldedCard.classList.add('dragging');
+    }
     cardPos.x = g.originX + dx;
     cardPos.y = g.originY + dy;
     applyCardTransform();
@@ -1987,9 +1998,18 @@
     else g.edge = null;
   }
 
-  function finishCardDrag(cancelled){
+  function finishCardGesture(cancelled){
     var g = cardGesture; if(!g) return;
     cardGesture = null;
+    if(!cancelled && !g.moved && cardIsAvailable() &&
+       performance.now()-g.startedAt >= cardVanishHoldMs){
+      state.cardOut = true;
+      el.foldedCard.classList.remove('visible');
+      el.foldedCard.style.transition = 'none';
+      el.foldedCard.style.opacity = '0';
+      return;
+    }
+    if(!g.dragging) return;
     state.draggingCard = false;
     el.foldedCard.classList.remove('dragging');
 
@@ -2027,9 +2047,12 @@
   }
 
   function touchCardStart(e){
-    if(e.touches.length !== 1 || cardGesture) return;
+    if(e.touches.length !== 1){
+      if(cardGesture && cardGesture.mode === 'touch') finishCardGesture(true);
+      return;
+    }
     var t = e.changedTouches[0];
-    if(beginCardDrag(t.clientX, t.clientY, t.identifier, 'touch')){
+    if(beginCardGesture(t.clientX, t.clientY, t.identifier, 'touch', e.target)){
       if(e.cancelable) e.preventDefault();
       e.stopPropagation();
     }
@@ -2038,18 +2061,19 @@
     var t = findActiveTouch(e.touches);
     if(!t) return;
     if(e.cancelable) e.preventDefault();
-    updateCardDrag(t.clientX, t.clientY);
+    updateCardGesture(t.clientX, t.clientY);
   }
   function touchCardEnd(e){
     var t = findActiveTouch(e.changedTouches);
     if(!t) return;
     if(e.cancelable) e.preventDefault();
-    finishCardDrag(e.type === 'touchcancel');
+    if(e.type !== 'touchcancel') updateCardGesture(t.clientX, t.clientY);
+    finishCardGesture(e.type === 'touchcancel');
   }
   function pointerCardStart(e){
-    if(e.pointerType === 'touch') return;
-    if(beginCardDrag(e.clientX, e.clientY, e.pointerId, 'pointer')){
-      try{ el.foldedCard.setPointerCapture(e.pointerId); }catch(err){}
+    if(e.pointerType === 'touch' || e.button !== 0) return;
+    if(beginCardGesture(e.clientX, e.clientY, e.pointerId, 'pointer', e.target)){
+      try{ el.stageScreen.setPointerCapture(e.pointerId); }catch(err){}
       e.preventDefault();
       e.stopPropagation();
     }
@@ -2057,11 +2081,12 @@
   function pointerCardMove(e){
     if(!cardGesture || cardGesture.mode !== 'pointer' || e.pointerId !== cardGesture.id) return;
     e.preventDefault();
-    updateCardDrag(e.clientX, e.clientY);
+    updateCardGesture(e.clientX, e.clientY);
   }
   function pointerCardEnd(e){
     if(!cardGesture || cardGesture.mode !== 'pointer' || e.pointerId !== cardGesture.id) return;
-    finishCardDrag(e.type === 'pointercancel');
+    if(e.type !== 'pointercancel') updateCardGesture(e.clientX, e.clientY);
+    finishCardGesture(e.type === 'pointercancel');
   }
 
   function shuffle(){
@@ -2151,11 +2176,11 @@
   window.addEventListener('pointercancel',capPointerEnd);
 
 
-  el.foldedCard.addEventListener('touchstart', touchCardStart, {passive:false});
+  el.stageScreen.addEventListener('touchstart', touchCardStart, {passive:false});
   document.addEventListener('touchmove', touchCardMove, {passive:false, capture:true});
   document.addEventListener('touchend', touchCardEnd, {passive:false, capture:true});
   document.addEventListener('touchcancel', touchCardEnd, {passive:false, capture:true});
-  el.foldedCard.addEventListener('pointerdown', pointerCardStart);
+  el.stageScreen.addEventListener('pointerdown', pointerCardStart);
   window.addEventListener('pointermove', pointerCardMove, {passive:false});
   window.addEventListener('pointerup', pointerCardEnd);
   window.addEventListener('pointercancel', pointerCardEnd);
