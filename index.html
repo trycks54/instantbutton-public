@@ -121,7 +121,7 @@
   .cavity.visible{opacity:1;}
   .threads{position:absolute;inset:6%;border-radius:50%;border:3px dashed rgba(200,210,220,.18);opacity:.55;}
 
-  .foldedCard{pointer-events:none;z-index:5;position:absolute;width:42%;aspect-ratio:524/483;left:50%;top:50%;transform:translate(-50%,-50%) scale(.72) rotate(var(--reveal-angle, -18deg));transform-origin:center center;background:transparent;box-shadow:none;opacity:0;transition:opacity 360ms ease 250ms, transform 360ms ease 250ms;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;}
+  .foldedCard{pointer-events:none;z-index:5;position:absolute;width:42%;aspect-ratio:var(--reveal-ratio,524/483);left:50%;top:50%;transform:translate(-50%,-50%) scale(.72) rotate(var(--reveal-angle, -18deg));transform-origin:center center;background:transparent;box-shadow:none;opacity:0;transition:opacity 360ms ease 250ms, transform 360ms ease 250ms;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;}
   .foldedCard.visible{pointer-events:auto;opacity:1;transform:translate(-50%,-50%) scale(1) rotate(var(--reveal-angle, -18deg));}
   .foldedCard.floating{position:absolute;left:0;top:0;z-index:30;cursor:grab;transition:none;touch-action:none;will-change:transform,opacity;}
   .foldedCard.floating.dragging{cursor:grabbing;}
@@ -147,7 +147,10 @@
   .secretSettingsPanel label{display:block;font-weight:700;font-size:14px;margin:14px 0 8px;}
   .secretSettingsPanel input[type=file]{display:block;width:100%;max-width:100%;font-size:14px;color:#c3cee2;background:#252e40;border-radius:10px;padding:12px;}
   .revealPreview{display:flex;align-items:center;justify-content:center;min-height:176px;margin:12px 0;background:repeating-conic-gradient(#273244 0% 25%,#1b2433 0% 50%) 50% / 18px 18px;border:1px solid #4a5468;border-radius:14px;overflow:hidden;}
-  .revealPreview img{display:block;max-width:min(80%,122px);max-height:122px;object-fit:contain;transform:rotate(var(--reveal-angle, -18deg));filter:drop-shadow(0 8px 8px #0007);}
+  .revealPreviewObject{position:relative;max-width:80%;transform:rotate(var(--reveal-angle,-18deg));filter:drop-shadow(0 8px 8px #0007);}
+  .revealPreviewObject img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
+  img.revealPresetImage{inset:auto;left:var(--object-left);top:var(--object-top);width:var(--object-width);height:var(--object-height);clip-path:var(--object-outline);}
+  #revealObjectChoice{display:block;width:100%;margin-bottom:12px;padding:9px;color:#fff;background:#293143;border:1px solid #4a5468;border-radius:10px;}
   .revealSizeRow{display:flex;align-items:center;gap:12px;}
   .revealSizeRow input{flex:1;min-width:0;accent-color:#ff6b62;}
   .revealSizeRow output{min-width:52px;text-align:right;font-variant-numeric:tabular-nums;}
@@ -374,7 +377,15 @@
       <p>Customize the object hidden inside the button. Press and hold <b>Shuffle</b> to open this panel again.</p>
       <label for="revealImageInput">Reveal object image</label>
       <input type="file" id="revealImageInput" accept="image/*" aria-label="Upload a picture of the reveal object">
-      <div class="revealPreview"><img id="revealImagePreview" alt="Reveal object preview"></div>
+      <label for="revealObjectChoice">Reveal object</label>
+      <select id="revealObjectChoice">
+        <option value="default">Original red folded card</option>
+        <option value="blue-card">Blue folded card</option>
+        <option value="morgan">Morgan silver dollar</option>
+        <option value="kennedy">Kennedy half dollar</option>
+        <option value="upload" disabled>Uploaded image</option>
+      </select>
+      <div class="revealPreview"><div class="revealPreviewObject" id="revealPreviewObject"><img id="revealImagePreview" alt="Reveal object preview"></div></div>
       <label for="revealSizeSlider">Object size when it comes out</label>
       <div class="revealSizeRow">
         <input type="range" id="revealSizeSlider" min="30" max="200" step="5" value="100">
@@ -940,11 +951,22 @@
 
   // User-customizable reveal image. IndexedDB avoids localStorage's tiny
   // quota and keeps the upload available offline in the installed PWA.
-  var revealSettings={size:100, image:null, ratio:483/524};
+  var revealSettings={size:100, ratio:483/524};
   var defaultRevealImage=document.getElementById('cardPhoto').getAttribute('src');
   var revealOverlay=document.getElementById('secretSettingsOverlay');
   var revealInput=document.getElementById('revealImageInput');
   var revealPreview=document.getElementById('revealImagePreview');
+  var revealPreviewObject=document.getElementById('revealPreviewObject');
+  var revealObjectChoice=document.getElementById('revealObjectChoice');
+  var revealPresets={
+    'blue-card':{url:'./objects/object-1307.png',x:309,y:881,width:754,height:906,
+      outline:'polygon(24% 41%, 24.3% 40.2%, 25.2% 39.8%, 26.2% 38.5%, 27.7% 37.9%, 29.9% 37.4%, 29.5% 36.2%, 30% 35.4%, 31.2% 34.8%, 33.2% 34.4%, 64.5% 31.5%, 65% 31.6%, 82.6% 57.5%, 82.1% 57.7%, 52% 62.5%, 44.8% 63.9%, 43.1% 63.9%)'},
+    morgan:{url:'./objects/object-1308.png',x:382,y:1082,width:625,height:621,
+      outline:'ellipse(24.22% 11.10% at 53.84% 49.80%)'},
+    kennedy:{url:'./objects/object-1309.png',x:457,y:952,width:517,height:510,
+      outline:'ellipse(20.03% 9.12% at 55.47% 43.17%)'}
+  };
+  var uploadedReveal=null;
   var revealSizeSlider=document.getElementById('revealSizeSlider');
   var revealSizeValue=document.getElementById('revealSizeValue');
   var revealStatus=document.getElementById('revealSettingsStatus');
@@ -981,13 +1003,27 @@
   }
   function applyRevealImage(){
     var photo=document.getElementById('cardPhoto');
-    var url=revealSettings.image||defaultRevealImage;
-    photo.src=url;
-    revealPreview.src=url;
-    // The card's original style embeds the red Bicycle-back photograph
-    // twice: as a CSS background and an IMG. Hide the original CSS layer
-    // only when a different image is uploaded.
-    el.foldedCard.style.backgroundImage=revealSettings.image?'none':'';
+    var preset=revealPresets[revealObjectChoice.value];
+    var selected=preset||(revealObjectChoice.value==='upload'?uploadedReveal:null);
+    var width=selected?selected.width:524;
+    var height=selected?selected.height:483;
+    revealSettings.ratio=Math.max(.1,Math.min(10,height/width));
+    [photo,revealPreview].forEach(function(img){
+      img.classList.toggle('revealPresetImage',!!preset);
+      if(preset){
+        img.style.setProperty('--object-width',1290/width*100+'%');
+        img.style.setProperty('--object-height',2796/height*100+'%');
+        img.style.setProperty('--object-left',-preset.x/width*100+'%');
+        img.style.setProperty('--object-top',-preset.y/height*100+'%');
+        img.style.setProperty('--object-outline',preset.outline);
+      }
+      img.src=selected?selected.url:defaultRevealImage;
+    });
+    el.foldedCard.style.backgroundImage=selected?'none':'';
+    el.foldedCard.style.setProperty('--reveal-ratio',String(1/revealSettings.ratio));
+    revealPreviewObject.style.width=Math.min(122,122/revealSettings.ratio)+'px';
+    revealPreviewObject.style.aspectRatio=String(1/revealSettings.ratio);
+    if(el.foldedCard.classList.contains('floating'))updateRevealSize(revealSettings.size);
   }
   function updateRevealSize(value){
     var next=Math.max(30,Math.min(200,parseInt(value,10)||100));
@@ -1015,7 +1051,7 @@
     var angle=Number.isFinite(parsed)?Math.max(-180,Math.min(180,parsed)):-18;
     revealAngleSlider.value=String(angle);
     revealAngleValue.textContent=angle+'°';
-    revealPreview.style.setProperty('--reveal-angle',angle+'deg');
+    revealPreviewObject.style.setProperty('--reveal-angle',angle+'deg');
     el.foldedCard.style.setProperty('--reveal-angle',angle+'deg');
     return angle;
   }
@@ -1054,12 +1090,20 @@
     revealOverlay.classList.add('show');
   }
   function closeRevealSettings(){revealOverlay.classList.remove('show');}
-  function setUploadedReveal(dataURL, width, height){
-    revealSettings.image=dataURL;
-    revealSettings.ratio=Math.max(.1,Math.min(10,height/width));
+  var revealObjectChanged=false;
+  var savedRevealObject=null;
+  try{savedRevealObject=localStorage.getItem('instant-button-reveal-object');}catch(e){}
+  function chooseRevealObject(value){
+    revealObjectChanged=true;
+    revealObjectChoice.value=value;
     applyRevealImage();
-    if(el.foldedCard.classList.contains('floating'))updateRevealSize(revealSettings.size);
+    try{localStorage.setItem('instant-button-reveal-object',value);}
+    catch(e){revealStatus.textContent='Could not save the selected object on this device.';}
   }
+  revealObjectChoice.addEventListener('change',function(){
+    revealStatus.textContent='';
+    chooseRevealObject(this.value);
+  });
   revealInput.addEventListener('change',function(){
     var file=revealInput.files&&revealInput.files[0];
     if(!file)return;
@@ -1079,9 +1123,10 @@
         var ctx=canvas.getContext('2d');
         ctx.drawImage(img,0,0,canvas.width,canvas.height);
         var data=canvas.toDataURL('image/png');
-        setUploadedReveal(data,canvas.width,canvas.height);
-        revealStatus.textContent='Image selected. Stored on this device.';
-        revealStoreSet('image',{url:data,width:canvas.width,height:canvas.height}).then(function(){
+        uploadedReveal={url:data,width:canvas.width,height:canvas.height};
+        revealObjectChoice.querySelector('[value="upload"]').disabled=false;
+        chooseRevealObject('upload');
+        revealStoreSet('image',uploadedReveal).then(function(){
           revealStatus.textContent='Image saved for offline use.';
         }).catch(function(){revealStatus.textContent='Image works now, but could not be saved. Check available storage.';});
       };
@@ -1095,18 +1140,26 @@
   document.getElementById('closeRevealSettings').addEventListener('click',closeRevealSettings);
   document.getElementById('saveRevealSettings').addEventListener('click',closeRevealSettings);
   document.getElementById('restoreDefaultReveal').addEventListener('click',function(){
-    revealSettings.image=null;revealSettings.ratio=483/524;
+    uploadedReveal=null;
+    revealObjectChoice.querySelector('[value="upload"]').disabled=true;
     revealInput.value='';
-    applyRevealImage();
+    chooseRevealObject('default');
     saveRevealSize(100);
     saveRevealAngle(-18);
     revealStatus.textContent='Default folded card restored.';
     revealStoreSet('image',null).catch(function(){revealStatus.textContent='Could not clear saved image; check storage.';});
   });
   revealOverlay.addEventListener('click',function(e){if(e.target===revealOverlay)closeRevealSettings();});
+  if(revealPresets[savedRevealObject])revealObjectChoice.value=savedRevealObject;
   applyRevealImage();
   revealStoreGet('image').then(function(saved){
-    if(saved&&saved.url)setUploadedReveal(saved.url,saved.width||524,saved.height||483);
+    if(!saved||!saved.url||uploadedReveal)return;
+    uploadedReveal={url:saved.url,width:saved.width||524,height:saved.height||483};
+    revealObjectChoice.querySelector('[value="upload"]').disabled=false;
+    if(!revealObjectChanged && (savedRevealObject===null||savedRevealObject==='upload')){
+      revealObjectChoice.value='upload';
+      applyRevealImage();
+    }
   }).catch(function(){});
 
   // The sound manager stores Blob objects in IndexedDB, rather than localStorage,
