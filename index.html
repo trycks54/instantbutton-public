@@ -147,7 +147,7 @@
   .secretSettingsPanel label{display:block;font-weight:700;font-size:14px;margin:14px 0 8px;}
   .secretSettingsPanel input[type=file]{display:block;width:100%;max-width:100%;font-size:14px;color:#c3cee2;background:#252e40;border-radius:10px;padding:12px;}
   .revealPreview{display:flex;align-items:center;justify-content:center;min-height:176px;margin:12px 0;background:repeating-conic-gradient(#273244 0% 25%,#1b2433 0% 50%) 50% / 18px 18px;border:1px solid #4a5468;border-radius:14px;overflow:hidden;}
-  .revealPreviewObject{position:relative;max-width:80%;transform:rotate(var(--reveal-angle,-18deg));filter:drop-shadow(0 8px 8px #0007);}
+  .revealPreviewObject{position:relative;max-width:80%;transform:rotate(var(--reveal-angle,-18deg)) scale(var(--reveal-preview-scale,.5));filter:drop-shadow(0 8px 8px #0007);}
   .revealPreviewObject img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
   img.revealPresetImage{inset:auto;left:var(--object-left);top:var(--object-top);width:var(--object-width);height:var(--object-height);clip-path:var(--object-outline);}
   #revealObjectChoice{display:block;width:100%;margin-bottom:12px;padding:9px;color:#fff;background:#293143;border:1px solid #4a5468;border-radius:10px;}
@@ -1030,6 +1030,8 @@
     revealSettings.size=next;
     revealSizeSlider.value=String(next);
     revealSizeValue.textContent=next+'%';
+    // Fit the full 30–200% range, including rotated objects, inside the preview.
+    revealPreviewObject.style.setProperty('--reveal-preview-scale',String(next/200));
     if(el.foldedCard.classList.contains('floating')){
       var screen=el.screenGlass.getBoundingClientRect();
       var newW=Math.min(screen.width*.88,Math.min(screen.width*.60,330)*next/100);
