@@ -146,8 +146,8 @@
   .secretSettingsPanel p{margin:6px 0 16px;color:#a8b4cc;font-size:13px;line-height:1.5;}
   .secretSettingsPanel label{display:block;font-weight:700;font-size:14px;margin:14px 0 8px;}
   .secretSettingsPanel input[type=file]{display:block;width:100%;max-width:100%;font-size:14px;color:#c3cee2;background:#252e40;border-radius:10px;padding:12px;}
-  .revealPreview{max-height:46vh;max-height:46dvh;margin:12px 0;background:repeating-conic-gradient(#273244 0% 25%,#1b2433 0% 50%) 50% / 18px 18px;border:1px solid #4a5468;border-radius:14px;overflow:auto;}
-  .revealPreviewCanvas{display:grid;place-items:center;min-width:100%;min-height:176px;}
+  .revealPreview{height:min(360px,48vh);height:min(360px,48dvh);margin:12px 0;background:repeating-conic-gradient(#273244 0% 25%,#1b2433 0% 50%) 50% / 18px 18px;border:1px solid #4a5468;border-radius:14px;overflow:auto;}
+  .revealPreviewCanvas{display:grid;place-items:center;min-width:100%;min-height:100%;}
   .revealPreviewObject{position:relative;transform:rotate(var(--reveal-angle,-18deg));filter:drop-shadow(0 8px 8px #0007);}
   .revealPreviewObject img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
   img.revealPresetImage{inset:auto;left:var(--object-left);top:var(--object-top);width:var(--object-width);height:var(--object-height);clip-path:var(--object-outline);}
