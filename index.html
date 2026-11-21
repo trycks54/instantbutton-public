@@ -872,6 +872,10 @@
   var bundledSounds=sounds.map(function(s,i){
     return Object.assign({id:'builtin-'+i},s);
   });
+  var dingIndex=bundledSounds.findIndex(function(sound){
+    return sound.src==='./sounds/13.mp3';
+  });
+  if(dingIndex>0)bundledSounds.unshift(bundledSounds.splice(dingIndex,1)[0]);
   sounds=bundledSounds.slice();
   var customSoundChanges=[];
   var customSoundURLs=[];
