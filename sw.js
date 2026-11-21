@@ -1,5 +1,5 @@
 // Offline assets for Instant Button v1.9.6 with 35 licensed-by-user-supplied MP3s.
-const CACHE = 'instant-button-v1.9.6-17';
+const CACHE = 'instant-button-v1.9.6-18';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
   './sounds/01.mp3',
@@ -38,7 +38,9 @@ const SHELL = ['./', './index.html', './manifest.webmanifest',
   './sounds/34.mp3',
   './sounds/35.mp3'];
 self.addEventListener('install', event => {
-  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL)).then(() => self.skipWaiting()));
+  event.waitUntil(caches.open(CACHE).then(cache => cache.addAll(SHELL.map(url =>
+    url === './' || url === './index.html' ? new Request(url, {cache:'reload'}) : url
+  ))).then(() => self.skipWaiting()));
 });
 self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
@@ -69,7 +71,7 @@ self.addEventListener('fetch', event => {
     return;
   }
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).then(response => {
+    event.respondWith(fetch(request, {cache:'no-cache'}).then(response => {
       if (response.ok) { const copy=response.clone(); caches.open(CACHE).then(cache => cache.put('./index.html',copy)); }
       return response;
     }).catch(() => caches.match('./index.html')));

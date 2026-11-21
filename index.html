@@ -69,7 +69,7 @@
   .action.play{background:#2a3344;color:#fff;}
   .action.choose{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;}
 
-  .stage-screen{padding:0;overflow:hidden;background:#0b0d12;}
+  .stage-screen{padding:0;overflow:hidden;background:#10254b;}
   .secretCorner{position:absolute;right:0;bottom:calc(env(safe-area-inset-bottom, 0px) + 9px);width:118px;height:136px;z-index:32;background:transparent;border:0;padding:0;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;cursor:default;}
   .topbar{position:absolute;top:0;left:0;right:0;z-index:22;padding:calc(env(safe-area-inset-top,0) + 12px) 14px 14px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;}
   .topbar .left,.topbar .right{pointer-events:auto;display:flex;gap:10px;align-items:center;}
@@ -84,11 +84,11 @@
   .brokenDot[data-count="2"] span:nth-child(-n+2),
   .brokenDot[data-count="3"] span:nth-child(-n+3){display:block;}
 
-  .device-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;perspective:1600px;overflow:hidden;background:radial-gradient(circle at 50% 10%,#5d656f 0%,#2d3238 35%,#171a1f 100%);}
+  .device-stage{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;perspective:1600px;overflow:hidden;background:transparent;}
   .phone{position:relative;width:100%;height:100%;max-width:none;aspect-ratio:auto;border-radius:0;padding:0;background:none;box-shadow:none;transform:none;}
   .phone:before{display:none;}
   .bezel{position:relative;width:100%;height:100%;border-radius:0;background:transparent;padding:0;overflow:hidden;}
-  .screenGlass{position:relative;width:100%;height:100%;border-radius:0;overflow:hidden;background: radial-gradient(circle at 15% 20%, rgba(255,255,255,.09), rgba(255,255,255,0) 25%), linear-gradient(180deg, #142749 0%, #1b3258 36%, #0a162c 100%);}
+  .screenGlass{position:relative;width:100%;height:100%;border-radius:0;overflow:hidden;background:#10254b radial-gradient(ellipse at 50% 36%, #234b87 0%, #142f5c 54%, #0b1935 100%);}
 
   .marble{position:absolute;inset:0;opacity:.96;background-image: radial-gradient(circle at 12% 22%, rgba(255,255,255,.22) 0 9%, rgba(255,255,255,0) 10%), linear-gradient(120deg, transparent 0 18%, rgba(122,130,144,.27) 20%, transparent 22% 36%, rgba(145,150,160,.24) 39%, transparent 42% 58%, rgba(118,126,142,.18) 61%, transparent 63%), linear-gradient(60deg, transparent 0 24%, rgba(100,110,124,.2) 25%, transparent 26% 52%, rgba(120,125,140,.17) 54%, transparent 56%), linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.04));mix-blend-mode:multiply;pointer-events:none;}
   .dynamic-island{display:none;}
@@ -2303,7 +2303,7 @@
   // Standalone index.html continues to function without the manifest/worker.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     window.addEventListener('load', function () {
-      navigator.serviceWorker.register('./sw.js', {scope:'./'}).catch(function () {});
+      navigator.serviceWorker.register('./sw.js', {scope:'./',updateViaCache:'none'}).catch(function () {});
     });
   }
 </script>
