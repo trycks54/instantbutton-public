@@ -1672,7 +1672,7 @@
     // Enable interaction with the exposed card.
     el.cavity.classList.add('visible');
     el.foldedCard.classList.add('visible');
-    el.instructionBox.textContent='Tap the card to make it vanish, or drag it toward an edge. You can also hold an empty area for 1.2 seconds and release.';
+    el.instructionBox.textContent='Tap once to enlarge the card, then tap again to make it vanish. Drag it toward an edge, or hold an empty area for 1.2 seconds and release.';
   }
   function restoreCap(){
     if(capTimer){clearTimeout(capTimer);capTimer=null;}
@@ -2003,6 +2003,10 @@
     cardGesture = null;
     if(!cancelled && !g.moved && cardIsAvailable() &&
        (g.onCard || performance.now()-g.startedAt >= cardVanishHoldMs)){
+      if(g.onCard && !el.foldedCard.classList.contains('floating')){
+        placeCardOnScreen();
+        return;
+      }
       state.cardOut = true;
       el.foldedCard.classList.remove('visible');
       el.foldedCard.style.transition = 'none';
