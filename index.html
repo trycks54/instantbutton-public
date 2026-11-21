@@ -1938,9 +1938,11 @@
     return { width:s.width, height:s.height };
   }
 
-  function beginCardDrag(clientX, clientY, id, mode){
+  function beginCardDrag(clientX, clientY, id, mode, target){
     if(!state.isOpen || state.cardOut || cardGesture || !el.foldedCard.classList.contains('visible')) return false;
     var wasFloating = el.foldedCard.classList.contains('floating');
+    var onCard = el.foldedCard.contains(target);
+    if(!onCard && (!wasFloating || target.closest('button, input, select, textarea, a'))) return false;
     if(!wasFloating) placeCardOnScreen();
     if(cardExtractTimer){ clearTimeout(cardExtractTimer); cardExtractTimer = null; }
     el.foldedCard.style.transition = 'none';
@@ -1953,6 +1955,7 @@
       originX:cardPos.x,
       originY:cardPos.y,
       canVanish:wasFloating,
+      onCard:onCard,
       moved:false,
       edge:null,
       stage:measureStage()
@@ -1964,7 +1967,7 @@
   }
 
   function updateCardDrag(clientX, clientY){
-    var g = cardGesture; if(!g) return;
+    var g = cardGesture; if(!g || !g.onCard) return;
     var dx = clientX - g.startX;
     var dy = clientY - g.startY;
     if(!g.moved && Math.hypot(dx,dy) <= 6) return;
@@ -1995,7 +1998,7 @@
     state.draggingCard = false;
     el.foldedCard.classList.remove('dragging');
 
-    if(!cancelled && g.canVanish && !g.moved){
+    if(!cancelled && g.canVanish){
       el.foldedCard.style.transition = 'none';
       el.foldedCard.style.opacity = '0';
       el.foldedCard.classList.remove('visible');
@@ -2036,7 +2039,7 @@
   function touchCardStart(e){
     if(e.touches.length !== 1 || cardGesture) return;
     var t = e.changedTouches[0];
-    if(beginCardDrag(t.clientX, t.clientY, t.identifier, 'touch')){
+    if(beginCardDrag(t.clientX, t.clientY, t.identifier, 'touch', e.target)){
       if(e.cancelable) e.preventDefault();
       e.stopPropagation();
     }
@@ -2055,9 +2058,9 @@
     finishCardDrag(e.type === 'touchcancel');
   }
   function pointerCardStart(e){
-    if(e.pointerType === 'touch') return;
-    if(beginCardDrag(e.clientX, e.clientY, e.pointerId, 'pointer')){
-      try{ el.foldedCard.setPointerCapture(e.pointerId); }catch(err){}
+    if(e.pointerType === 'touch' || e.button !== 0) return;
+    if(beginCardDrag(e.clientX, e.clientY, e.pointerId, 'pointer', e.target)){
+      try{ el.stageScreen.setPointerCapture(e.pointerId); }catch(err){}
       e.preventDefault();
       e.stopPropagation();
     }
@@ -2160,11 +2163,11 @@
   window.addEventListener('pointercancel',capPointerEnd);
 
 
-  el.foldedCard.addEventListener('touchstart', touchCardStart, {passive:false});
+  el.stageScreen.addEventListener('touchstart', touchCardStart, {passive:false});
   document.addEventListener('touchmove', touchCardMove, {passive:false, capture:true});
   document.addEventListener('touchend', touchCardEnd, {passive:false, capture:true});
   document.addEventListener('touchcancel', touchCardEnd, {passive:false, capture:true});
-  el.foldedCard.addEventListener('pointerdown', pointerCardStart);
+  el.stageScreen.addEventListener('pointerdown', pointerCardStart);
   window.addEventListener('pointermove', pointerCardMove, {passive:false});
   window.addEventListener('pointerup', pointerCardEnd);
   window.addEventListener('pointercancel', pointerCardEnd);
