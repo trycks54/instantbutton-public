@@ -79,7 +79,7 @@
   .instructionHidden{display:none !important;}
   .brokenDot{position:absolute;top:calc(env(safe-area-inset-top,0) + 20px);right:16px;z-index:23;display:flex;gap:3px;align-items:center;justify-content:flex-end;opacity:0;pointer-events:none;transition:opacity .15s ease;}
   .brokenDot.show{opacity:1;}
-  .brokenDot span{width:3px;height:3px;border-radius:50%;background:#090909;flex:0 0 3px;display:none;}
+  .brokenDot span{width:3px;height:3px;border-radius:50%;background:#fff;flex:0 0 3px;display:none;}
   .brokenDot[data-count="1"] span:nth-child(1),
   .brokenDot[data-count="2"] span:nth-child(-n+2),
   .brokenDot[data-count="3"] span:nth-child(-n+3){display:block;}
@@ -92,7 +92,7 @@
 
   .marble{position:absolute;inset:0;opacity:.96;background-image: radial-gradient(circle at 12% 22%, rgba(255,255,255,.22) 0 9%, rgba(255,255,255,0) 10%), linear-gradient(120deg, transparent 0 18%, rgba(122,130,144,.27) 20%, transparent 22% 36%, rgba(145,150,160,.24) 39%, transparent 42% 58%, rgba(118,126,142,.18) 61%, transparent 63%), linear-gradient(60deg, transparent 0 24%, rgba(100,110,124,.2) 25%, transparent 26% 52%, rgba(120,125,140,.17) 54%, transparent 56%), linear-gradient(180deg, rgba(255,255,255,.1), rgba(255,255,255,.04));mix-blend-mode:multiply;pointer-events:none;}
   .dynamic-island{display:none;}
-  .soundName{position:absolute;top:96px;left:0;right:0;text-align:center;color:#edf3ff;font-weight:800;font-size:clamp(20px,3vw,28px);letter-spacing:.02em;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,.45);padding:0 20px;}
+  .soundName{position:absolute;top:96px;left:0;right:0;text-align:center;color:#fff;font-weight:800;font-size:clamp(20px,3vw,28px);letter-spacing:.02em;z-index:3;text-shadow:0 1px 2px rgba(0,0,0,.45);padding:0 20px;}
   .instruction{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);width:min(92vw,740px);background:rgba(255,255,255,.30);border:1px solid rgba(255,255,255,.35);backdrop-filter:blur(10px);color:#21252e;padding:14px 16px;border-radius:18px;font-size:14px;line-height:1.4;z-index:4;box-shadow:0 12px 24px rgba(0,0,0,.18);}
 
   .buttonArea{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(70vw,460px);aspect-ratio:1;z-index:8;touch-action:none;}
