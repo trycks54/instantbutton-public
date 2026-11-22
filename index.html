@@ -102,7 +102,6 @@
   .capWrap{position:absolute;inset:12%;z-index:7;transform-style:preserve-3d;touch-action:none;transition:none;will-change:transform;user-select:none;-webkit-user-select:none;}
   .capWrap.floating{position:absolute;inset:auto;left:0;top:0;z-index:35;touch-action:none;will-change:transform,opacity;cursor:grab;}
   .capWrap.floating.dragging{cursor:grabbing;}
-  .capWrap.removed{display:none !important;pointer-events:none;}
   .capWrap.pressed .buttonCap,.buttonCap.press-flash{filter:brightness(.84) saturate(1.12);transform:translateY(5px) scale(.956);box-shadow:inset 0 6px 18px rgba(0,0,0,.27), inset 0 -12px 18px rgba(0,0,0,.34), 0 5px 8px rgba(0,0,0,.25);}
   .buttonCap{transition:filter .09s, transform .085s, box-shadow .085s;touch-action:none;user-select:none;-webkit-user-select:none;}
   .capWrap.unscrewing .buttonCap{box-shadow:inset 0 10px 16px rgba(255,255,255,.3), inset 0 -20px 30px rgba(0,0,0,.32), 0 20px 30px rgba(0,0,0,.35);}
@@ -1699,14 +1698,11 @@
     }
   }
 
-  // Full mechanical sequence: unscrew by rotating a finger around the cap,
-  // then pick up the loose cap and drag it off-screen. The card is not revealed
-  // until the cap has actually been removed.
-  var capState={phase:'closed',angle:0,x:0,y:0,active:null};
-  var capTimer=null;
+  // The cover detaches from the base and stays on-stage for reassembly.
+  var capState={phase:'closed',angle:0,x:0,y:0,scale:1,active:null};
   function capTransform(){
     if(capState.phase==='floating'){
-      el.capWrap.style.transform='translate3d('+capState.x+'px,'+capState.y+'px,0) rotate('+capState.angle+'deg)';
+      el.capWrap.style.transform='translate3d('+capState.x+'px,'+capState.y+'px,0) rotate('+capState.angle+'deg) scale('+capState.scale+')';
     } else if(capState.phase==='unscrewing'){
       var p=Math.min(1,Math.abs(capState.angle)/240);
       el.capWrap.style.transform='translate3d(0,'+(-p*17)+'px,0) rotate('+capState.angle+'deg) scale('+(1+0.06*p)+')';
@@ -1717,7 +1713,7 @@
     }
   }
   function loosenCap(){
-    if(capState.phase==='floating'||capState.phase==='removed')return;
+    if(capState.phase==='floating')return;
     // Read its final visual rectangle before moving to the full-screen layer.
     var rect=el.capWrap.getBoundingClientRect();
     var area=el.screenGlass.getBoundingClientRect();
@@ -1734,16 +1730,24 @@
     capState.x=rect.left-area.left+rect.width/2-width/2;
     capState.y=rect.top-area.top+rect.height/2-height/2;
     capTransform();
-    el.instructionBox.textContent='The cover is loose. Drag the red cover completely off any screen edge.';
+    el.instructionBox.textContent='Drag the loose cover away from the base to park it in a corner.';
   }
-  function removeCap(){
-    if(capState.phase==='removed'||!state.broken)return;
-    capState.phase='removed';
-    capState.active=null;
-    state.capGesture=null;
+  function parkCap(){
+    var stage=measureStage();
+    var width=el.capWrap.offsetWidth, height=el.capWrap.offsetHeight;
+    var right=capState.x+width/2>stage.width/2;
+    var bottom=capState.y+height/2>stage.height/2;
+    var parkedSize=Math.min(96,stage.width*.25,stage.height*.25);
+    var half=parkedSize/2;
+    capState.scale=parkedSize/Math.max(width,height);
+    capState.angle=0;
+    capState.x=(right?stage.width-16-half:16+half)-width/2;
+    capState.y=(bottom?stage.height-20-half:64+half)-height/2;
+    el.capWrap.style.transition='transform 240ms cubic-bezier(.18,.8,.3,1)';
+    capTransform();
+    if(state.isOpen)return;
     state.isOpen=true;
     playMetalLidSound('remove');
-    el.capWrap.classList.add('removed');
     // Artwork and cavity were already painted behind the cap.
     // Enable interaction with the exposed card.
     el.cavity.classList.add('visible');
@@ -1751,18 +1755,17 @@
     el.instructionBox.textContent='Touch the card to pick it up, then drag it toward an edge.';
   }
   function restoreCap(){
-    if(capTimer){clearTimeout(capTimer);capTimer=null;}
-    capState={phase:'closed',angle:0,x:0,y:0,active:null};
+    capState={phase:'closed',angle:0,x:0,y:0,scale:1,active:null};
     var assembly=document.getElementById('buttonAssembly');
     if(el.capWrap.parentNode!==assembly)assembly.appendChild(el.capWrap);
-    el.capWrap.classList.remove('removed','floating','dragging','unscrewing','pressed','open');
+    el.capWrap.classList.remove('floating','dragging','unscrewing','pressed','open');
     el.bigButton.classList.remove('press-flash');
     el.capWrap.style.width='';el.capWrap.style.height='';
     el.capWrap.style.transform='';el.capWrap.style.filter='';
     el.capWrap.style.opacity='';el.capWrap.style.transition='';
   }
 
-  function resetRoutine(){
+  function resetRoutine(silent){
     setBrokenDot(false);
     state.pressCount = 0;
     state.armed = false;
@@ -1780,7 +1783,7 @@
     el.foldedCard.classList.remove('visible');
     el.cardLabel.classList.remove('visible');
     resetCardPosition();
-    showToast('Routine reset.');
+    if(!silent)showToast('Routine reset.');
   }
 
   function showPanel(){ el.panelWrap.classList.add('show'); }
@@ -1845,7 +1848,7 @@
   // Match card movement: touch identifier persists at document level and all
   // motion uses stable screen coordinates, even after the finger leaves the cap.
   function capStart(x,y,id,mode){
-    if(state.isOpen||capState.active)return false;
+    if(capState.active||cardGesture)return false;
     var a=capState.active={id:id,mode:mode,startX:x,startY:y,
       originX:capState.x,originY:capState.y,
       originAngle:capState.angle,lastAngle:angleFromCenter({clientX:x,clientY:y},document.getElementById('buttonArea')),
@@ -1892,26 +1895,29 @@
     capState.active=null;
     el.capWrap.classList.remove('pressed','dragging');
     if(capState.phase==='floating'){
-      var s=measureStage();
-      var w=el.capWrap.offsetWidth,h=el.capWrap.offsetHeight;
-      var x=capState.x,y=capState.y;
-      var nearEdge=x<20||y<20||x+w>s.width-20||y+h>s.height-20;
-      if(!cancelled&&g.moved&&nearEdge){
-        var distances={left:x,right:s.width-(x+w),top:y,bottom:s.height-(y+h)};
-        var edge=Object.keys(distances).sort(function(a,b){return distances[a]-distances[b];})[0];
-        if(edge==='left')capState.x=-w-30;
-        if(edge==='right')capState.x=s.width+w+30;
-        if(edge==='top')capState.y=-h-30;
-        if(edge==='bottom')capState.y=s.height+h+30;
-        el.capWrap.style.transition='transform 270ms cubic-bezier(.18,.8,.3,1), opacity 270ms ease';
-        el.capWrap.style.opacity='0';
+      if(cancelled){
+        capState.x=g.originX;
+        capState.y=g.originY;
         capTransform();
-        capTimer=setTimeout(function(){capTimer=null;removeCap();},290);
+      }else if(g.moved){
+        var base=document.getElementById('buttonArea').getBoundingClientRect();
+        var area=el.screenGlass.getBoundingClientRect();
+        var dx=capState.x+el.capWrap.offsetWidth/2-(base.left-area.left+base.width/2);
+        var dy=capState.y+el.capWrap.offsetHeight/2-(base.top-area.top+base.height/2);
+        var radius=Math.min(base.width,base.height)*.25;
+        if(Math.hypot(dx,dy)<=radius){
+          resetRoutine(true);
+          // The drop can generate a click. Let the next physical press play immediately.
+          lastCapSoundTap=performance.now();
+          lastPhysicalAudioStart=-10000;
+        }else{
+          parkCap();
+        }
       }
       return;
     }
     if(capState.phase==='unscrewing'){
-      el.instructionBox.textContent='Keep twisting the cap to loosen it, then drag it off-screen.';
+      el.instructionBox.textContent='Keep twisting the cover to loosen it, then drag it toward a corner.';
     }
   }
   function capFindTouch(list){
@@ -1931,7 +1937,7 @@
   }
   function playOnPhysicalStart(){
     if(!state.current || !el.stageScreen.classList.contains('active') ||
-       state.isOpen || capState.phase==='floating' || capState.phase==='removed') return;
+       state.isOpen || capState.phase==='floating') return;
     var now=performance.now();
     if(now-lastPhysicalAudioStart<350) return; // dedupe touch/pointer/click
     lastPhysicalAudioStart=now;
@@ -1943,15 +1949,13 @@
   // Receive both playback and twist-start on the stage capture layer.
   // This is needed for iOS WKWebViews that target a layered container.
   function capturedCapContact(x,y,id,mode){
-    if(!state.current || !el.stageScreen.classList.contains('active') ||
-       state.isOpen || capState.phase==='removed') return false;
+    if(!state.current || !el.stageScreen.classList.contains('active') || cardGesture) return false;
     var r=el.capWrap.getBoundingClientRect();
     var cx=r.left+r.width/2, cy=r.top+r.height/2;
     var radius=Math.min(r.width,r.height)*.46;
     if(Math.hypot(x-cx,y-cy)>radius)return false;
     if(capState.phase!=='floating') playOnPhysicalStart();
-    capStart(x,y,id,mode);
-    return true;
+    return capStart(x,y,id,mode);
   }
   el.stageScreen.addEventListener('touchstart',function(e){
     if(e.touches.length!==1 || !e.changedTouches.length)return;
@@ -1983,6 +1987,7 @@
   function capTouchEnd(e){
     var t=capFindTouch(e.changedTouches);if(!t)return;
     if(e.cancelable)e.preventDefault();
+    if(e.type!=='touchcancel' && capState.phase==='floating')capMove(t.clientX,t.clientY);
     capEnd(e.type==='touchcancel');
   }
   function capPointerStart(e){
@@ -1997,6 +2002,7 @@
   function capPointerEnd(e){
     var a=capState.active;
     if(!a||a.mode!=='pointer'||a.id!==e.pointerId)return;
+    if(e.type!=='pointercancel' && capState.phase==='floating')capMove(e.clientX,e.clientY);
     capEnd(e.type==='pointercancel');
   }
   // Touch-first drag engine. iOS and Android touch streams are tracked by
@@ -2092,7 +2098,7 @@
   }
 
   function beginCardDrag(clientX, clientY, id, mode, target){
-    if(!state.isOpen || state.cardOut || cardGesture || !el.foldedCard.classList.contains('visible')) return false;
+    if(!state.isOpen || state.cardOut || cardGesture || capState.active || !el.foldedCard.classList.contains('visible')) return false;
     var wasFloating = el.foldedCard.classList.contains('floating');
     var onCard = el.foldedCard.contains(target);
     var prank=revealObjectChoice.value==='cockroach';
