@@ -383,6 +383,8 @@
         <option value="blue-card">Blue folded card</option>
         <option value="morgan">Morgan silver dollar</option>
         <option value="kennedy">Kennedy half dollar</option>
+        <option value="p50">₱50 bill</option>
+        <option value="p100">₱100 bill</option>
         <option value="cockroach">Cockroach (prank)</option>
         <option value="upload" disabled>Uploaded image</option>
       </select>
@@ -961,6 +963,10 @@
   var revealPreviewCanvas=document.getElementById('revealPreviewCanvas');
   var revealObjectChoice=document.getElementById('revealObjectChoice');
   var revealPresets={
+    p50:{url:'./objects/p50-bill.png',x:404,y:212,width:1460,height:1168,sourceWidth:2388,sourceHeight:1668,
+      outline:'polygon(17.14% 14.09%, 18.41% 12.73%, 73.65% 12.73%, 73.97% 17.73%, 77.46% 18.18%, 77.78% 20.00%, 73.97% 81.36%, 73.02% 82.27%, 17.14% 78.18%)'},
+    p100:{url:'./objects/p100-bill.png',x:574,y:315,width:1165,height:1028,sourceWidth:2388,sourceHeight:1668,
+      outline:'polygon(30.48% 19.09%, 71.43% 30.91%, 72.70% 32.73%, 65.08% 80.00%, 64.13% 80.45%, 24.13% 65.00%)'},
     cockroach:{url:'./objects/cockroach.gif',width:477,height:536},
     'blue-card':{url:'./objects/object-1307.png',x:309,y:881,width:754,height:906,
       outline:'polygon(24% 41%, 24.3% 40.2%, 25.2% 39.8%, 26.2% 38.5%, 27.7% 37.9%, 29.9% 37.4%, 29.5% 36.2%, 30% 35.4%, 31.2% 34.8%, 33.2% 34.4%, 64.5% 31.5%, 65% 31.6%, 82.6% 57.5%, 82.1% 57.7%, 52% 62.5%, 44.8% 63.9%, 43.1% 63.9%)'},
@@ -1014,8 +1020,8 @@
     [photo,revealPreview].forEach(function(img){
       img.classList.toggle('revealPresetImage',!!(preset&&preset.outline));
       if(preset&&preset.outline){
-        img.style.setProperty('--object-width',1290/width*100+'%');
-        img.style.setProperty('--object-height',2796/height*100+'%');
+        img.style.setProperty('--object-width',(preset.sourceWidth||1290)/width*100+'%');
+        img.style.setProperty('--object-height',(preset.sourceHeight||2796)/height*100+'%');
         img.style.setProperty('--object-left',-preset.x/width*100+'%');
         img.style.setProperty('--object-top',-preset.y/height*100+'%');
         img.style.setProperty('--object-outline',preset.outline);
