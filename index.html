@@ -1699,10 +1699,10 @@
   }
 
   // The cover detaches from the base and stays on-stage for reassembly.
-  var capState={phase:'closed',angle:0,x:0,y:0,scale:1,active:null};
+  var capState={phase:'closed',angle:0,x:0,y:0,active:null};
   function capTransform(){
     if(capState.phase==='floating'){
-      el.capWrap.style.transform='translate3d('+capState.x+'px,'+capState.y+'px,0) rotate('+capState.angle+'deg) scale('+capState.scale+')';
+      el.capWrap.style.transform='translate3d('+capState.x+'px,'+capState.y+'px,0) rotate('+capState.angle+'deg)';
     } else if(capState.phase==='unscrewing'){
       var p=Math.min(1,Math.abs(capState.angle)/240);
       el.capWrap.style.transform='translate3d(0,'+(-p*17)+'px,0) rotate('+capState.angle+'deg) scale('+(1+0.06*p)+')';
@@ -1737,12 +1737,10 @@
     var width=el.capWrap.offsetWidth, height=el.capWrap.offsetHeight;
     var right=capState.x+width/2>stage.width/2;
     var bottom=capState.y+height/2>stage.height/2;
-    var parkedSize=Math.min(96,stage.width*.25,stage.height*.25);
-    var half=parkedSize/2;
-    capState.scale=parkedSize/Math.max(width,height);
+    var cornerInset=Math.min(48,stage.width*.125,stage.height*.125);
     capState.angle=0;
-    capState.x=(right?stage.width-16-half:16+half)-width/2;
-    capState.y=(bottom?stage.height-20-half:64+half)-height/2;
+    capState.x=(right?stage.width-16-cornerInset:16+cornerInset)-width/2;
+    capState.y=(bottom?stage.height-20-cornerInset:64+cornerInset)-height/2;
     el.capWrap.style.transition='transform 240ms cubic-bezier(.18,.8,.3,1)';
     capTransform();
     if(state.isOpen)return;
@@ -1755,7 +1753,7 @@
     el.instructionBox.textContent='Touch the card to pick it up, then drag it toward an edge.';
   }
   function restoreCap(){
-    capState={phase:'closed',angle:0,x:0,y:0,scale:1,active:null};
+    capState={phase:'closed',angle:0,x:0,y:0,active:null};
     var assembly=document.getElementById('buttonAssembly');
     if(el.capWrap.parentNode!==assembly)assembly.appendChild(el.capWrap);
     el.capWrap.classList.remove('floating','dragging','unscrewing','pressed','open');
