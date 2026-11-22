@@ -384,6 +384,7 @@
         <option value="blue-card">Blue folded card</option>
         <option value="morgan">Morgan silver dollar</option>
         <option value="kennedy">Kennedy half dollar</option>
+        <option value="cockroach">Cockroach (prank)</option>
         <option value="upload" disabled>Uploaded image</option>
       </select>
       <div class="revealPreview"><div class="revealPreviewCanvas" id="revealPreviewCanvas"><div class="revealPreviewObject" id="revealPreviewObject"><img id="revealImagePreview" alt="Reveal object preview"></div></div></div>
@@ -961,6 +962,7 @@
   var revealPreviewCanvas=document.getElementById('revealPreviewCanvas');
   var revealObjectChoice=document.getElementById('revealObjectChoice');
   var revealPresets={
+    cockroach:{url:'./objects/cockroach.png',width:2500,height:2500},
     'blue-card':{url:'./objects/object-1307.png',x:309,y:881,width:754,height:906,
       outline:'polygon(24% 41%, 24.3% 40.2%, 25.2% 39.8%, 26.2% 38.5%, 27.7% 37.9%, 29.9% 37.4%, 29.5% 36.2%, 30% 35.4%, 31.2% 34.8%, 33.2% 34.4%, 64.5% 31.5%, 65% 31.6%, 82.6% 57.5%, 82.1% 57.7%, 52% 62.5%, 44.8% 63.9%, 43.1% 63.9%)'},
     morgan:{url:'./objects/object-1308.png',x:382,y:1082,width:625,height:621,
@@ -1011,8 +1013,8 @@
     var height=selected?selected.height:483;
     revealSettings.ratio=Math.max(.1,Math.min(10,height/width));
     [photo,revealPreview].forEach(function(img){
-      img.classList.toggle('revealPresetImage',!!preset);
-      if(preset){
+      img.classList.toggle('revealPresetImage',!!(preset&&preset.outline));
+      if(preset&&preset.outline){
         img.style.setProperty('--object-width',1290/width*100+'%');
         img.style.setProperty('--object-height',2796/height*100+'%');
         img.style.setProperty('--object-left',-preset.x/width*100+'%');
@@ -1655,6 +1657,7 @@
   }
 
   function goBack(){
+    stopCockroach();
     stopMemeAudio();
     el.stageScreen.classList.remove('active');
     el.galleryScreen.classList.add('active');
@@ -1807,6 +1810,7 @@
   }
 
   function resetCardPosition(){
+    stopCockroach();
     if(cardExtractTimer){clearTimeout(cardExtractTimer);cardExtractTimer=null;}
     var c = el.foldedCard;
     state.draggingCard = false;
@@ -2011,11 +2015,82 @@
     return { width:s.width, height:s.height };
   }
 
+  var cockroachAnimation=null;
+
+  function stopCockroach(){
+    if(!cockroachAnimation)return;
+    cockroachAnimation.onfinish=null;
+    cockroachAnimation.cancel();
+    cockroachAnimation=null;
+  }
+
+  function runCockroach(){
+    var object=el.foldedCard;
+    var stage=measureStage();
+    var w=object.offsetWidth;
+    var h=object.offsetHeight;
+    var x=cardPos.x;
+    var y=cardPos.y;
+    var routes=['horizontal','vertical','diagonal','horizontal','vertical','diagonal'];
+    for(var i=routes.length-1;i>0;i--){
+      var j=Math.floor(Math.random()*(i+1));
+      var swap=routes[i];routes[i]=routes[j];routes[j]=swap;
+    }
+    var exit=Math.floor(Math.random()*4);
+    var clearance=Math.hypot(w,h)+16;
+    var maxX=Math.max(0,stage.width-w);
+    var maxY=Math.max(0,stage.height-h);
+    function oppositeSide(position,limit){
+      var fraction=Math.random()*.24;
+      return limit*(position>limit/2?fraction:1-fraction);
+    }
+    function leg(index){
+      var route=routes[index];
+      var nextX=x;
+      var nextY=y;
+      if(route){
+        if(route!=='vertical')nextX=oppositeSide(x,maxX);
+        if(route!=='horizontal')nextY=oppositeSide(y,maxY);
+      }else if(exit===0)nextX=-clearance;
+      else if(exit===1)nextX=stage.width+clearance;
+      else if(exit===2)nextY=-clearance;
+      else nextY=stage.height+clearance;
+      var dx=nextX-x;
+      var dy=nextY-y;
+      var heading=Math.atan2(dx,-dy)*180/Math.PI;
+      var start='translate3d('+x+'px,'+y+'px,0) rotate('+heading+'deg)';
+      var end='translate3d('+nextX+'px,'+nextY+'px,0) rotate('+heading+'deg)';
+      object.style.transform=end;
+      var duration=Math.max(160,Math.min(520,Math.hypot(dx,dy)*1.1));
+      cockroachAnimation=object.animate([{transform:start},{transform:end}],{
+        duration:duration,
+        easing:'cubic-bezier(.25,.65,.7,1)'
+      });
+      cockroachAnimation.onfinish=function(){
+        cockroachAnimation=null;
+        x=nextX;y=nextY;
+        if(route)leg(index+1);
+        else{
+          object.style.opacity='0';
+          object.classList.remove('visible');
+        }
+      };
+    }
+    state.cardOut=true;
+    if(typeof object.animate==='function')leg(0);
+    else object.style.opacity='0';
+  }
+
   function beginCardDrag(clientX, clientY, id, mode, target){
     if(!state.isOpen || state.cardOut || cardGesture || !el.foldedCard.classList.contains('visible')) return false;
     var wasFloating = el.foldedCard.classList.contains('floating');
     var onCard = el.foldedCard.contains(target);
-    if(!onCard && (!wasFloating || target.closest('button, input, select, textarea, a'))) return false;
+    var prank=revealObjectChoice.value==='cockroach';
+    if(!onCard && (prank || !wasFloating || target.closest('button, input, select, textarea, a'))) return false;
+    if(prank){
+      cardGesture={id:id,mode:mode,startX:clientX,startY:clientY,prank:true,moved:false};
+      return true;
+    }
     if(!wasFloating) placeCardOnScreen();
     if(cardExtractTimer){ clearTimeout(cardExtractTimer); cardExtractTimer = null; }
     el.foldedCard.style.transition = 'none';
@@ -2040,11 +2115,12 @@
   }
 
   function updateCardDrag(clientX, clientY){
-    var g = cardGesture; if(!g || !g.onCard) return;
+    var g = cardGesture; if(!g || (!g.prank && !g.onCard)) return;
     var dx = clientX - g.startX;
     var dy = clientY - g.startY;
     if(!g.moved && Math.hypot(dx,dy) <= 6) return;
     g.moved = true;
+    if(g.prank)return;
     cardPos.x = g.originX + dx;
     cardPos.y = g.originY + dy;
     applyCardTransform();
@@ -2068,6 +2144,13 @@
   function finishCardDrag(cancelled){
     var g = cardGesture; if(!g) return;
     cardGesture = null;
+    if(g.prank){
+      if(!cancelled&&!g.moved){
+        placeCardOnScreen();
+        runCockroach();
+      }
+      return;
+    }
     state.draggingCard = false;
     el.foldedCard.classList.remove('dragging');
 
