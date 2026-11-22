@@ -149,7 +149,6 @@
   .revealPreview{height:min(360px,48vh);height:min(360px,48dvh);margin:12px 0;background:repeating-conic-gradient(#273244 0% 25%,#1b2433 0% 50%) 50% / 18px 18px;border:1px solid #4a5468;border-radius:14px;overflow:auto;}
   .revealPreviewCanvas{display:grid;place-items:center;min-width:100%;min-height:100%;}
   .revealPreviewObject{position:relative;transform:rotate(var(--reveal-angle,-18deg));filter:drop-shadow(0 8px 8px #0007);}
-  .cockroachReveal{mix-blend-mode:multiply;}
   .revealPreviewObject img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain;}
   img.revealPresetImage{inset:auto;left:var(--object-left);top:var(--object-top);width:var(--object-width);height:var(--object-height);clip-path:var(--object-outline);}
   #revealObjectChoice{display:block;width:100%;margin-bottom:12px;padding:9px;color:#fff;background:#293143;border:1px solid #4a5468;border-radius:10px;}
@@ -1024,9 +1023,6 @@
       }
       img.src=selected?selected.url:defaultRevealImage;
     });
-    var cockroach=revealObjectChoice.value==='cockroach';
-    el.foldedCard.classList.toggle('cockroachReveal',cockroach);
-    revealPreviewObject.classList.toggle('cockroachReveal',cockroach);
     el.foldedCard.style.backgroundImage=selected?'none':'';
     el.foldedCard.style.setProperty('--reveal-ratio',String(1/revealSettings.ratio));
     updateRevealSize(revealSettings.size);
