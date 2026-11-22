@@ -1,9 +1,9 @@
 // Offline assets for Instant Button v1.9.6 with 35 licensed-by-user-supplied MP3s.
-const CACHE = 'instant-button-v1.9.6-24';
+const CACHE = 'instant-button-v1.9.6-25';
 const SHELL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
   './objects/object-1307.png', './objects/object-1308.png', './objects/object-1309.png',
-  './objects/cockroach.png',
+  './objects/cockroach.gif',
   './sounds/01.mp3',
   './sounds/02.mp3',
   './sounds/03.mp3',
